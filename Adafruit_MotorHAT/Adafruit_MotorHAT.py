@@ -66,6 +66,9 @@ class Adafruit_StepperMotor:
 			methodname += str(self.default_style)
 			methodname += str(self.default_dir)
 		self.oneStep = getattr(self, methodname, self._oneStep)
+		if self.default_style in [1,2,3]:
+			self.MC._pwm.setPWM(self.PWMA, 0, 4080)
+			self.MC._pwm.setPWM(self.PWMB, 0, 4080)
 		
 	def setSpeed(self, rpm):
 		self.sec_per_step = 60.0 / (self.revsteps * rpm)
