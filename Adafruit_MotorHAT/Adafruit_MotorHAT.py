@@ -77,6 +77,15 @@ class Adafruit_StepperMotor:
 		self._coilStep()
 		return self.currentstep
 
+	def _oneStepSINGLEBACKWARD(self):
+    		if ((self.currentstep/(self.MICROSTEPS/2)) % 2): 
+			self.currentstep -= self.MICROSTEPS/2
+		else:
+			self.currentstep -= self.MICROSTEPS
+		self.currentstep += self.MICROSTEPS * 4
+		self.currentstep %= self.MICROSTEPS * 4
+		self._coilStep()
+		return self.currentstep
 
 	def _oneStepDOUBLEFORWARD(self):
 		if not (self.currentstep/(self.MICROSTEPS/2) % 2):
@@ -88,17 +97,6 @@ class Adafruit_StepperMotor:
 		self._coilStep()
 		return self.currentstep
 
-	def _oneStepSINGLEBACKWARD(self):
-    		if ((self.currentstep/(self.MICROSTEPS/2)) % 2): 
-			self.currentstep -= self.MICROSTEPS/2
-		else:
-			self.currentstep -= self.MICROSTEPS
-		self.currentstep += self.MICROSTEPS * 4
-		self.currentstep %= self.MICROSTEPS * 4
-		self._coilStep()
-		return self.currentstep
-
-
 	def _oneStepDOUBLEBACKWARD(self):
 		if not (self.currentstep/(self.MICROSTEPS/2) % 2):
 			self.currentstep -= self.MICROSTEPS/2
@@ -109,6 +107,19 @@ class Adafruit_StepperMotor:
 		self._coilStep()
 		return self.currentstep
 
+	def _oneStepINTERLEAVEFORWARD(self):
+		self.currentstep += self.MICROSTEPS/2
+		self.currentstep += self.MICROSTEPS * 4
+		self.currentstep %= self.MICROSTEPS * 4
+		self._coilStep()
+		return self.currentstep
+
+	def _oneStepINTERLEAVEBACKWARD(self):
+		self.currentstep -= self.MICROSTEPS/2
+		self.currentstep += self.MICROSTEPS * 4
+		self.currentstep %= self.MICROSTEPS * 4
+		self._coilStep()
+		return self.currentstep
 	
 	def _oneStep(self, dir, style):
 		pwm_a = pwm_b = 255
