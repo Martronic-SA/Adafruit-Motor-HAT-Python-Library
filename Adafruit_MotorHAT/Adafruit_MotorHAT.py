@@ -59,7 +59,7 @@ class Adafruit_StepperMotor:
 					self.currentstep += self.MICROSTEPS
 				else:
 					self.currentstep -= self.MICROSTEPS
-		if (style == Adafruit_MotorHAT.DOUBLE):
+		elif (style == Adafruit_MotorHAT.DOUBLE):
 			if not (self.currentstep/(self.MICROSTEPS/2) % 2):
 				# we're at an even step, weird
 				if (dir == Adafruit_MotorHAT.FORWARD):
@@ -72,13 +72,13 @@ class Adafruit_StepperMotor:
 					self.currentstep += self.MICROSTEPS
 				else:
 					self.currentstep -= self.MICROSTEPS
-		if (style == Adafruit_MotorHAT.INTERLEAVE):
+		elif (style == Adafruit_MotorHAT.INTERLEAVE):
 			if (dir == Adafruit_MotorHAT.FORWARD):
 				self.currentstep += self.MICROSTEPS/2
 			else:
 				self.currentstep -= self.MICROSTEPS/2
 
-		if (style == Adafruit_MotorHAT.MICROSTEP):
+		elif (style == Adafruit_MotorHAT.MICROSTEP):
 			if (dir == Adafruit_MotorHAT.FORWARD):
 				self.currentstep += 1
 			else:
