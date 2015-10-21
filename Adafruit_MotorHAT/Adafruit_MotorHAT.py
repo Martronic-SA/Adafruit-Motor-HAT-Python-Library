@@ -30,9 +30,11 @@ class Adafruit_StepperMotor:
 		self.default_dir = default_dir
 		methodname = '_oneStep'
 		if self.default_style:
-			methodname += ['SINGLE','DOUBLE','INTERLEAVE','MICROSTEP'][self.default_style-1]
-			methodname += ['FORWARD','BACKWARD'][self.default_dir-1]
+			methodname += str(self.default_style)
+			methodname += str(self.default_dir)
 		self.oneStep = getattr(self, methodname, self._oneStep)
+		self.MICROSTEPS2 = self.MICROSTEPS/2
+		self.4MICROSTEPS = self.MICROSTEPS*4
 
 		num -= 1
 
@@ -61,63 +63,53 @@ class Adafruit_StepperMotor:
 		self.steppingcounter = 0
 
 	def _coilStep(self):
+		self.currentstep += self.4MICROSTEPS
+		self.currentstep %= self.4MICROSTEPS
 		coils = self.step2coils[self.currentstep/(self.MICROSTEPS/2)]
 		self.MC.setPin(self.AIN2, coils[0])
 		self.MC.setPin(self.BIN1, coils[1])
 		self.MC.setPin(self.AIN1, coils[2])
 		self.MC.setPin(self.BIN2, coils[3])
 
-	def _oneStepSINGLEFORWARD(self):
-    		if ((self.currentstep/(self.MICROSTEPS/2)) % 2): 
-			self.currentstep += self.MICROSTEPS/2
+	def _oneStep11(self):
+    		if ((self.currentstep/(self.MICROSTEPS2)) % 2): 
+			self.currentstep += self.MICROSTEPS2
 		else:
 			self.currentstep += self.MICROSTEPS
-		self.currentstep += self.MICROSTEPS * 4
-		self.currentstep %= self.MICROSTEPS * 4
 		self._coilStep()
 		return self.currentstep
 
-	def _oneStepSINGLEBACKWARD(self):
-    		if ((self.currentstep/(self.MICROSTEPS/2)) % 2): 
-			self.currentstep -= self.MICROSTEPS/2
+	def _oneStep12(self):
+    		if ((self.currentstep/(self.MICROSTEPS2)) % 2): 
+			self.currentstep -= self.MICROSTEPS2
 		else:
 			self.currentstep -= self.MICROSTEPS
-		self.currentstep += self.MICROSTEPS * 4
-		self.currentstep %= self.MICROSTEPS * 4
 		self._coilStep()
 		return self.currentstep
 
-	def _oneStepDOUBLEFORWARD(self):
-		if not (self.currentstep/(self.MICROSTEPS/2) % 2):
-			self.currentstep += self.MICROSTEPS/2
+	def _oneStep21(self):
+		if not (self.currentstep/(self.MICROSTEPS2) % 2):
+			self.currentstep += self.MICROSTEPS2
 		else:
 			self.currentstep += self.MICROSTEPS
-		self.currentstep += self.MICROSTEPS * 4
-		self.currentstep %= self.MICROSTEPS * 4
 		self._coilStep()
 		return self.currentstep
 
-	def _oneStepDOUBLEBACKWARD(self):
-		if not (self.currentstep/(self.MICROSTEPS/2) % 2):
-			self.currentstep -= self.MICROSTEPS/2
+	def _oneStep22(self):
+		if not (self.currentstep/(self.MICROSTEPS2) % 2):
+			self.currentstep -= self.MICROSTEPS2
 		else:
 			self.currentstep -= self.MICROSTEPS
-		self.currentstep += self.MICROSTEPS * 4
-		self.currentstep %= self.MICROSTEPS * 4
 		self._coilStep()
 		return self.currentstep
 
-	def _oneStepINTERLEAVEFORWARD(self):
-		self.currentstep += self.MICROSTEPS/2
-		self.currentstep += self.MICROSTEPS * 4
-		self.currentstep %= self.MICROSTEPS * 4
+	def _oneStep31(self):
+		self.currentstep += self.MICROSTEPS2
 		self._coilStep()
 		return self.currentstep
 
-	def _oneStepINTERLEAVEBACKWARD(self):
-		self.currentstep -= self.MICROSTEPS/2
-		self.currentstep += self.MICROSTEPS * 4
-		self.currentstep %= self.MICROSTEPS * 4
+	def _oneStep32(self):
+		self.currentstep -= self.MICROSTEPS2
 		self._coilStep()
 		return self.currentstep
 	
