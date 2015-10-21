@@ -6,18 +6,33 @@ import time
 class Adafruit_StepperMotor:
 	MICROSTEPS = 8
 	MICROSTEP_CURVE = [0, 50, 98, 142, 180, 212, 236, 250, 255]
+	step2coils = [ 	[1, 0, 0, 0], 
+			[1, 1, 0, 0],
+			[0, 1, 0, 0],
+			[0, 1, 1, 0],
+			[0, 0, 1, 0],
+			[0, 0, 1, 1],
+			[0, 0, 0, 1],
+			[1, 0, 0, 1] ]
 
 	#MICROSTEPS = 16
 	# a sinusoidal curve NOT LINEAR!
 	#MICROSTEP_CURVE = [0, 25, 50, 74, 98, 120, 141, 162, 180, 197, 212, 225, 236, 244, 250, 253, 255]
 	
-	def __init__(self, controller, num, steps=200):
+	def __init__(self, controller, num, steps=200, default_style=None, default_dir=Adafruit_MotorHAT.FORWARD):
 		self.MC = controller
 		self.revsteps = steps
 		self.motornum = num
 		self.sec_per_step = 0.1
 		self.steppingcounter = 0
 		self.currentstep = 0
+		self.default_style = default_style
+		self.default_dir = default_dir
+		methodname = '_oneStep'
+		if self.default_style:
+			methodname += ['SINGLE','DOUBLE','INTERLEAVE','MICROSTEP'][self.default_style-1]
+			methodname += ['FORWARD','BACKWARD'][self.default_dir-1]
+		self.oneStep = getattr(self, methodname, self._oneStep)
 
 		num -= 1
 
@@ -37,12 +52,65 @@ class Adafruit_StepperMotor:
 			self.BIN1 = 5
 		else:
 			raise NameError('MotorHAT Stepper must be between 1 and 2 inclusive')
+		if self.default_style in [1,2,3]:
+			self.MC._pwm.setPWM(self.PWMA, 0, 4080)
+			self.MC._pwm.setPWM(self.PWMB, 0, 4080)
 
 	def setSpeed(self, rpm):
 		self.sec_per_step = 60.0 / (self.revsteps * rpm)
 		self.steppingcounter = 0
 
-	def oneStep(self, dir, style):
+	def _coilStep(self):
+		coils = self.step2coils[self.currentstep/(self.MICROSTEPS/2)]
+		self.MC.setPin(self.AIN2, coils[0])
+		self.MC.setPin(self.BIN1, coils[1])
+		self.MC.setPin(self.AIN1, coils[2])
+		self.MC.setPin(self.BIN2, coils[3])
+
+	def _oneStepSINGLEFORWARD(self):
+    		if ((self.currentstep/(self.MICROSTEPS/2)) % 2): 
+			self.currentstep += self.MICROSTEPS/2
+		else:
+			self.currentstep += self.MICROSTEPS
+		self.currentstep += self.MICROSTEPS * 4
+		self.currentstep %= self.MICROSTEPS * 4
+		self._coilStep()
+		return self.currentstep
+
+
+	def _oneStepDOUBLEFORWARD(self):
+		if not (self.currentstep/(self.MICROSTEPS/2) % 2):
+			self.currentstep += self.MICROSTEPS/2
+		else:
+			self.currentstep += self.MICROSTEPS
+		self.currentstep += self.MICROSTEPS * 4
+		self.currentstep %= self.MICROSTEPS * 4
+		self._coilStep()
+		return self.currentstep
+
+	def _oneStepSINGLEBACKWARD(self):
+    		if ((self.currentstep/(self.MICROSTEPS/2)) % 2): 
+			self.currentstep -= self.MICROSTEPS/2
+		else:
+			self.currentstep -= self.MICROSTEPS
+		self.currentstep += self.MICROSTEPS * 4
+		self.currentstep %= self.MICROSTEPS * 4
+		self._coilStep()
+		return self.currentstep
+
+
+	def _oneStepDOUBLEBACKWARD(self):
+		if not (self.currentstep/(self.MICROSTEPS/2) % 2):
+			self.currentstep -= self.MICROSTEPS/2
+		else:
+			self.currentstep -= self.MICROSTEPS
+		self.currentstep += self.MICROSTEPS * 4
+		self.currentstep %= self.MICROSTEPS * 4
+		self._coilStep()
+		return self.currentstep
+
+	
+	def _oneStep(self, dir, style):
 		pwm_a = pwm_b = 255
 
 		# first determine what sort of stepping procedure we're up to
@@ -124,15 +192,7 @@ class Adafruit_StepperMotor:
                         elif (self.currentstep >= self.MICROSTEPS*3) and (self.currentstep < self.MICROSTEPS*4):
 				coils = [1, 0, 0, 1]
 		else:
-			step2coils = [ 	[1, 0, 0, 0], 
-				[1, 1, 0, 0],
-				[0, 1, 0, 0],
-				[0, 1, 1, 0],
-				[0, 0, 1, 0],
-				[0, 0, 1, 1],
-				[0, 0, 0, 1],
-				[1, 0, 0, 1] ]
-			coils = step2coils[self.currentstep/(self.MICROSTEPS/2)]
+			coils = self.step2coils[self.currentstep/(self.MICROSTEPS/2)]
 
 		#print "coils state = " + str(coils)
 		self.MC.setPin(self.AIN2, coils[0])
