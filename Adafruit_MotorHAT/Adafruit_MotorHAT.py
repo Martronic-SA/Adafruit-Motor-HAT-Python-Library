@@ -58,6 +58,15 @@ class Adafruit_StepperMotor:
 			self.MC._pwm.setPWM(self.PWMA, 0, 4080)
 			self.MC._pwm.setPWM(self.PWMB, 0, 4080)
 
+	def setDefaults(self, default_style=None, default_dir=Adafruit_MotorHAT.FORWARD):
+		self.default_style = default_style
+		self.default_dir = default_dir
+		methodname = '_oneStep'
+		if self.default_style:
+			methodname += str(self.default_style)
+			methodname += str(self.default_dir)
+		self.oneStep = getattr(self, methodname, self._oneStep)
+		
 	def setSpeed(self, rpm):
 		self.sec_per_step = 60.0 / (self.revsteps * rpm)
 		self.steppingcounter = 0
@@ -66,6 +75,48 @@ class Adafruit_StepperMotor:
 		self.currentstep += self.4MICROSTEPS
 		self.currentstep %= self.4MICROSTEPS
 		coils = self.step2coils[self.currentstep/(self.MICROSTEPS/2)]
+		self.MC.setPin(self.AIN2, coils[0])
+		self.MC.setPin(self.BIN1, coils[1])
+		self.MC.setPin(self.AIN1, coils[2])
+		self.MC.setPin(self.BIN2, coils[3])
+
+	def _coilStepMICROSTEP(self):
+                self.currentstep += self.4MICROSTEPS
+                self.currentstep %= self.4MICROSTEPS
+		pwm_a = pwm_b = 0
+		if (self.currentstep >= 0) and (self.currentstep < self.MICROSTEPS):
+			pwm_a = self.MICROSTEP_CURVE[self.MICROSTEPS - self.currentstep]
+			pwm_b = self.MICROSTEP_CURVE[self.currentstep]
+		elif (self.currentstep >= self.MICROSTEPS) and (self.currentstep < self.MICROSTEPS*2):
+			pwm_a = self.MICROSTEP_CURVE[self.currentstep - self.MICROSTEPS]
+			pwm_b = self.MICROSTEP_CURVE[self.MICROSTEPS*2 - self.currentstep]
+		elif (self.currentstep >= self.MICROSTEPS*2) and (self.currentstep < self.MICROSTEPS*3):
+			pwm_a = self.MICROSTEP_CURVE[self.MICROSTEPS*3 - self.currentstep]
+			pwm_b = self.MICROSTEP_CURVE[self.currentstep - self.MICROSTEPS*2]
+		elif (self.currentstep >= self.MICROSTEPS*3) and (self.currentstep < self.4MICROSTEPS):
+                        pwm_a = self.MICROSTEP_CURVE[self.currentstep - self.MICROSTEPS*3]
+                        pwm_b = self.MICROSTEP_CURVE[self.4MICROSTEPS - self.currentstep]
+		# go to next 'step' and wrap around
+		self.currentstep += self.4MICROSTEPS
+		self.currentstep %= self.4MICROSTEPS
+
+		# only really used for microstepping, otherwise always on!
+		self.MC._pwm.setPWM(self.PWMA, 0, pwm_a*16)
+		self.MC._pwm.setPWM(self.PWMB, 0, pwm_b*16)
+
+		# set up coil energizing!
+		coils = [0, 0, 0, 0]
+
+		if (self.currentstep >= 0) and (self.currentstep < self.MICROSTEPS):
+			coils = [1, 1, 0, 0]
+                elif (self.currentstep >= self.MICROSTEPS) and (self.currentstep < self.MICROSTEPS*2):
+			coils = [0, 1, 1, 0]
+                elif (self.currentstep >= self.MICROSTEPS*2) and (self.currentstep < self.MICROSTEPS*3):
+			coils = [0, 0, 1, 1]
+                elif (self.currentstep >= self.MICROSTEPS*3) and (self.currentstep < self.MICROSTEPS*4):
+			coils = [1, 0, 0, 1]
+
+		#print "coils state = " + str(coils)
 		self.MC.setPin(self.AIN2, coils[0])
 		self.MC.setPin(self.BIN1, coils[1])
 		self.MC.setPin(self.AIN1, coils[2])
@@ -111,6 +162,16 @@ class Adafruit_StepperMotor:
 	def _oneStep32(self):
 		self.currentstep -= self.MICROSTEPS2
 		self._coilStep()
+		return self.currentstep
+
+	def _oneStep41(self):
+		self.currentstep += 1
+		self._coilStepMICROSTEP()
+		return self.currentstep
+
+	def _oneStep42(self):
+		self.currentstep -= 1
+		self._coilStepMICROSTEP()
 		return self.currentstep
 	
 	def _oneStep(self, dir, style):
@@ -206,6 +267,7 @@ class Adafruit_StepperMotor:
 		return self.currentstep
 
 	def step(self, steps, direction, stepstyle):
+		self.setDefaults(default_dir=direction, default_style=stepstyle)
 		s_per_s = self.sec_per_step
 		lateststep = 0
 		
